@@ -1642,7 +1642,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 							'			</ul>'+
 							'			<div>'+
 							'				<input id="nistsequencelabel" type="text" name="save-recrded" class="voice-save-recrded-inpt" placeholder="Enter label">'+
-							'				<button class="voice-cancel-btn" onclick="Voicepluginsdk.cancelrecordingsequence();">Cancel</button> <button onclick="Voicepluginsdk.submitrecordedlabel();" class="voice-submit-btn">Submit</button>'+
+							'				<button class="voice-cancel-btn" onclick="Voicepluginsdk.cancelrecordingsequence();">Cancel and exit</button> <button onclick="Voicepluginsdk.submitrecordedlabel();" class="voice-submit-btn">Submit</button>'+
 							'			</div>'+
 							'		</div>'+
 							'	</div>';
@@ -1666,6 +1666,11 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		submitrecordedlabel:function(){
 			var sequencename=$("#nistsequencelabel").val();
+			if(sequencename==''){
+				alert('Please enter proper label');
+				$("#nistsequencelabel").focus();
+				return false;
+			}
 			var sequenceids = [];
 			for(var i=0;i<this.recordedsequenceids.length;i++){
 				sequenceids.push(this.recordedsequenceids[i].id);
