@@ -761,7 +761,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			this.sendtoserver();
 			// console.log(this.menuitems);
 			if(processcount==totalcount) {
-				postmessage=false;
+				// postmessage=false;
 				this.showhtml();
 			}
 		},
