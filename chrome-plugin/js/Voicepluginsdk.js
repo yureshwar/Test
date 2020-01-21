@@ -308,7 +308,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				this.recorddocumentclick();
 				// console.log(this.sessiondata);
 			}else{
-				console.log("session key not found requesting from backend");
+				// console.log("session key not found requesting from backend");
 				var sessionevent = new CustomEvent("RequestSessiondata", {detail: {data: "getusersessiondata"}, bubbles: false, cancelable: false});
 				document.dispatchEvent(sessionevent);
 			}
