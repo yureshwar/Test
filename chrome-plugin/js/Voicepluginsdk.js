@@ -317,6 +317,10 @@ if (typeof Voicepluginsdk == 'undefined') {
 			var checkrecording = this.getstoragedata(this.recordingcookiename);
 			var buttonhtml="<img src=\""+this.extensionpath+"assets/uda-logo.png\" width=\"50px\" height=\"50px\" nist-voice=\"true\">";
 			$("#nistBtn").append(buttonhtml);
+			var modal =$("#nistBtn");
+			modal.click(function () {
+				Voicepluginsdk.openmodal();
+			});
 			if(checkrecording){
 				var checkrecordingdata=JSON.parse(checkrecording);
 				if(checkrecordingdata.hasOwnProperty("recording") && checkrecordingdata.recording){
@@ -324,13 +328,8 @@ if (typeof Voicepluginsdk == 'undefined') {
 					this.openmodal();
 				}
 			}
-
 			if(addnisticon){
 				this.addvoicesearchmodal(addnisticon);
-				var modal =$("#nistBtn");
-				modal.click(function () {
-					Voicepluginsdk.openmodal();
-				});
 				window.onclick = function(event) {
 					if (event.target == modal) {
 						Voicepluginsdk.closemodal();
