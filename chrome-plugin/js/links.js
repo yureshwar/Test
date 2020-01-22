@@ -63,7 +63,7 @@ EventTarget.prototype.addEventListener = function (addEventListener) {
 
 
 // Duplicating original eventlistner prototype
-HTMLElement.prototype.realAddEventListener = HTMLAnchorElement.prototype.addEventListener;
+/*HTMLElement.prototype.realAddEventListener = HTMLAnchorElement.prototype.addEventListener;
 
 // Modifying the original event listner function
 HTMLElement.prototype.addEventListener = function (a, b, c) {
@@ -72,7 +72,7 @@ HTMLElement.prototype.addEventListener = function (a, b, c) {
         let newClickObject = {element: this, action: b};
         addNewElement(newClickObject);
     }
-};
+};*/
 
 // adding the clickobjects that were identified.
 function addNewElement(clickObject) {
@@ -304,8 +304,8 @@ function doPost() {
     // console.log(clickObjects.length);
     var reindexevent;
     var indexevent;
-    // if (postmessage && Date.now() - lastPostTime >= POST_INTERVAL && (lastPostCount != clickObjects.length || processcount != lastPostCount)) {
-    if(postmessage && (lastPostCount != clickObjects.length)){
+    if (postmessage && Date.now() - lastPostTime >= POST_INTERVAL && (lastPostCount != clickObjects.length || processcount != lastPostCount)) {
+    // if(postmessage && (lastPostCount != clickObjects.length)){
 
         console.log("start time: " + processingtime);
         console.log("Stop time: " + processingtime);
