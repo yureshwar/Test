@@ -315,19 +315,16 @@ if (typeof Voicepluginsdk == 'undefined') {
 			$("#nistBtn").unbind("click").html("");
 			var addnisticon=true;
 			var checkrecording = this.getstoragedata(this.recordingcookiename);
+			var buttonhtml="<img src=\""+this.extensionpath+"assets/uda-logo.png\" width=\"50px\" height=\"50px\" nist-voice=\"true\">";
+			$("#nistBtn").append(buttonhtml);
 			if(checkrecording){
 				var checkrecordingdata=JSON.parse(checkrecording);
 				if(checkrecordingdata.hasOwnProperty("recording") && checkrecordingdata.recording){
 					addnisticon=false;
 					this.openmodal();
-				} else {
-					var buttonhtml="<img src=\""+this.extensionpath+"assets/uda-logo.png\" width=\"50px\" height=\"50px\" nist-voice=\"true\">";
 				}
-			} else {
-				var buttonhtml="<img src=\""+this.extensionpath+"assets/uda-logo.png\" width=\"50px\" height=\"50px\" nist-voice=\"true\">";
 			}
 
-			$("#nistBtn").append(buttonhtml);
 			if(addnisticon){
 				this.addvoicesearchmodal(addnisticon);
 				var modal =$("#nistBtn");
@@ -1291,7 +1288,6 @@ if (typeof Voicepluginsdk == 'undefined') {
 			xhr.setRequestHeader('Content-Type', 'application/json');
 			xhr.onload = function(event){
 				if(xhr.status == 200){
-					// console.log(xhr.response);
 					Voicepluginsdk.closemodal();
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
