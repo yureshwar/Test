@@ -9,87 +9,69 @@ var sessionkey="";
 var sessiondata={sessionkey:"",authenticated:false,authenticationsource:"",authdata:{}};
 var apikey = 'AIzaSyBeCZ1su0BYG5uGTHqqdg1bczlsubDuDrU';
 
-chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-	if(changeInfo.status=="complete") {
-		// console.log("executing script invoked");
-	}
-});
-
+//login with chrome identity functionality
 function loginwithgoogle(){
 	sessiondata.authenticationsource="google";
 	chrome.identity.getProfileUserInfo(function (data) {
-		// console.log(data);
-		sessiondata.authenticated=true;
-		sessiondata.authdata=data;
-		console.log(sessiondata);
-		bindauthenticatedaccount()
-	});
-	/*
-	chrome.identity.onSignInChanged.addListener(function(accountdata, signedIn){
-		console.log(accountdata);
-		console.log(signedIn);
-		sessiondata.authenticated=true;
-		sessiondata.authdata=accountdata;
-		console.log(sessiondata);
-	});
-	chrome.identity.getAuthToken({interactive: true}, function(token) {
-
-	});
-	*/
-}
-
-function sendsessiondata(sendaction="Usersessiondata"){
-	console.log(sessiondata);
-	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-		chrome.tabs.sendMessage(tabs[0].id, {action: sendaction, data: JSON.stringify(sessiondata)});
+		if(data.id!=='' && data.emailid!=="") {
+			sessiondata.authenticated = true;
+			sessiondata.authdata = data;
+			bindauthenticatedaccount();
+		} else {
+			sendsessiondata("Alertmessagedata","UDA: UserID not set. Digital assistant will not work.")
+		}
 	});
 }
 
+//send the sessiondata to the webpage functionality
+function sendsessiondata(sendaction="Usersessiondata",message=''){
+	if(sendaction==="Alertmessagedata"){
+		chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
+			chrome.tabs.sendMessage(tabs[0].id, {action: sendaction, data: JSON.stringify(message)});
+		});
+	} else {
+		chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
+			chrome.tabs.sendMessage(tabs[0].id, {action: sendaction, data: JSON.stringify(sessiondata)});
+		});
+	}
+}
+
+// listen for the requests made from webpage for accessing userdata
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-	console.log(request);
-	console.log(sender);
-	if(request.action == "getusersessiondata")
+	if(request.action === "getusersessiondata")
 	{
-		console.log("invoking session api");
 		chrome.storage.local.get([cookiename],function (storedsessiondata) {
 			if(chrome.runtime.lastError){
 
 			} else {
-				console.log(storedsessiondata);
 				if(storedsessiondata.hasOwnProperty("sessionkey")){
-					// console.log(sessiondata[cookiename]);
 					sessiondata=storedsessiondata;
 					sendsessiondata();
 				} else {
-					// loginwithgoogle();
 					getsessionkey();
 				}
-				// console.log(sessionkey);
 			}
 		});
 
-	} else if(request.action == "authtenicate") {
-		console.log("recieved message to authenticate");
+	} else if(request.action === "authtenicate") {
 		loginwithgoogle();
 	}
 });
 
+//storing the data to the chrome storage
 function storesessiondata(){
 	var storagedata={};
 	storagedata[cookiename]=sessiondata;
-	console.log(storagedata);
 	chrome.storage.local.set(storagedata, function() {
-		console.log('Session data has been stored');
 	});
 }
 
+//getting the sessionkey from backend server
 function getsessionkey(){
 	var xhr = new XMLHttpRequest();
 	xhr.open("Get", apihost+"/user/getsessionkey", false);
-	// xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 	xhr.onload = function(event){
-		if(xhr.status == 200){
-			console.log(xhr.response);
+		if(xhr.status === 200){
 			sessiondata.sessionkey=xhr.response;
 			storesessiondata();
 			sendsessiondata();
@@ -100,14 +82,14 @@ function getsessionkey(){
 	xhr.send();
 }
 
+//binding the sessionkey and chrome identity id
 function bindauthenticatedaccount(){
 	var xhr = new XMLHttpRequest();
 	var authdata={authid:sessiondata.authdata.id,emailid:sessiondata.authdata.email,authsource:sessiondata.authenticationsource};
 	xhr.open("POST", apihost+"/user/checkauthid", false);
 	xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 	xhr.onload = function(event){
-		if(xhr.status == 200){
-			console.log(xhr.response);
+		if(xhr.status === 200){
 			bindaccount(JSON.parse(xhr.response));
 		} else {
 			console.log(xhr.status+" : "+xhr.statusText);
@@ -116,15 +98,14 @@ function bindauthenticatedaccount(){
 	xhr.send(JSON.stringify(authdata));
 }
 
+//binding the session to the authid
 function bindaccount(userauthdata){
 	var xhr = new XMLHttpRequest();
-	console.log(sessiondata);
 	var usersessiondata={userauthid:userauthdata.id,usersessionid:sessiondata.sessionkey};
 	xhr.open("POST", apihost+"/user/checkusersession", false);
 	xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 	xhr.onload = function(event){
-		if(xhr.status == 200){
-			console.log(xhr.response);
+		if(xhr.status === 200){
 			storesessiondata();
 			sendsessiondata("AuthenticatedUsersessiondata");
 		} else {
