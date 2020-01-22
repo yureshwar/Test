@@ -1280,7 +1280,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			}
 
 			var sequencelistdata={name:sequencename,domain:window.location.host,usersessionid:this.sessionID,userclicknodelist:sequenceids.toString(),userclicknodesSet:this.recordedsequenceids};
-			this.cancelrecordingsequence(false);
+			this.cancelrecordingsequence(true);
 			var xhr = new XMLHttpRequest();
 			xhr.open("POST", this.apihost + "/clickevents/recordsequencedata", true);
 			xhr.setRequestHeader('Content-Type', 'application/json');
