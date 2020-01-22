@@ -929,7 +929,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				case "select":
 					var inputlabel=this.getclickedinputlabels(node);
 					var labelmatch=false;
-					if (inputlabel.text.toLowerCase() === selectednode.clickednodename.toLowerCase()) {
+					if (inputlabel.toLowerCase() === selectednode.clickednodename.toLowerCase()) {
 						labelmatch=true;
 						node.focus();
 					}
