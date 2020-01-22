@@ -897,7 +897,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			return template;
 		},
 		//matching the action of the node and invoking whether to click or focus
-		matchaction:function(data,close=true){
+		matchaction:function(data,close=true,selectednode){
 			if(close) {
 				this.closemodal();
 			}
@@ -927,11 +927,19 @@ if (typeof Voicepluginsdk == 'undefined') {
 					node.focus();
 					break;
 				case "select":
-					node.focus();
+					var inputlabel=this.getclickedinputlabels(node);
+					var labelmatch=false;
+					if (inputlabel.text.toLowerCase() === selectednode.clickednodename.toLowerCase()) {
+						labelmatch=true;
+						node.focus();
+					}
+					if(!labelmatch){
+						$(node).find(":selected").attr("selected",null);
+						$(node).val(selectednode.clickednodename);
+					}
 					break;
 				case "option":
-					// node.parentNode.focus();
-					$(node).attr('selected','selected');
+					node.parentNode.focus();
 					break;
 				case "checkbox":
 					node.click();
@@ -1482,7 +1490,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			}
 			if(matchnodes.length == 1){
 				this.updatenavcookiedata(navcookiedata,selectednode.id);
-				this.matchaction(matchnodes[0],false);
+				this.matchaction(matchnodes[0],false,selectednode);
 				return;
 			} else if(matchnodes.length>1) {
 				//todo need to perform some user intervention
@@ -1497,11 +1505,12 @@ if (typeof Voicepluginsdk == 'undefined') {
 				});
 				if(finalmatchnode.hasOwnProperty("element-data")) {
 					this.updatenavcookiedata(navcookiedata,selectednode.id);
-					this.matchaction(finalmatchnode, false);
+					this.matchaction(finalmatchnode, false,selectednode);
 				}
 				return;
 			} else {
 				console.log("no clicknodes found");
+				alert("Unable to find the action");
 			}
 		},
 		//comparing nodes of indexed and the sequence step selected
