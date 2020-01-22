@@ -934,7 +934,8 @@ if (typeof Voicepluginsdk == 'undefined') {
 					node.focus();
 					break;
 				case "option":
-					node.parentNode.focus();
+					// node.parentNode.focus();
+					$(node).attr('selected','selected');
 					break;
 				case "checkbox":
 					node.click();
