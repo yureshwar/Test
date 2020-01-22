@@ -240,7 +240,6 @@ function doPost() {
     if (postmessage && Date.now() - lastPostTime >= POST_INTERVAL && (lastPostCount != clickObjects.length || processcount != lastPostCount)) {
 
         if (startmutationslistner !== true) {
-            console.log("sending nodes index message");
             indexevent = new CustomEvent("Indexnodes", {
                 detail: {data: "indexclicknodes"},
                 bubbles: false,
@@ -250,7 +249,6 @@ function doPost() {
             lastPostTime = Date.now();
             lastPostCount = clickObjects.length;
         } else if (startmutationslistner && newclickObjects.length > 0) {
-            console.log("sending new nodes index message");
             reindexevent = new CustomEvent("Indexnodes", {
                 detail: {data: "indexnewclicknodes"},
                 bubbles: false,
