@@ -934,8 +934,22 @@ if (typeof Voicepluginsdk == 'undefined') {
 						node.focus();
 					}
 					if(!labelmatch){
-						$(node).find(":selected").attr("selected",null);
-						$(node).val(selectednode.clickednodename);
+						// $(node).val(selectednode.clickednodename);
+						var childnodes=node.childNodes;
+						var finalchildnode=null;
+						if(childnodes.length>0){
+							$(node).find(":selected").attr("selected",null);
+							for(var i=0;i<childnodes.length;i++){
+								var childnode=childnodes[i];
+								var textcontent = childnode.textContent.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
+								if(textcontent.toLowerCase()===selectednode.clickednodename.toLowerCase()){
+									finalchildnode=childnode;
+								}
+							}
+						}
+						if(finalchildnode!==null){
+							$(finalchildnode).attr("selected","selected");
+						}
 					}
 					break;
 				case "option":
