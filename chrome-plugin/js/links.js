@@ -237,7 +237,8 @@ function getNodeLabel(node) {
 function doPost() {
     var reindexevent;
     var indexevent;
-    if (postmessage && lastPostCount != clickObjects.length) {
+    if (postmessage && Date.now() - lastPostTime >= POST_INTERVAL && (lastPostCount != clickObjects.length || processcount != lastPostCount)) {
+
         if (startmutationslistner !== true) {
             indexevent = new CustomEvent("Indexnodes", {
                 detail: {data: "indexclicknodes"},
@@ -255,7 +256,7 @@ function doPost() {
             });
             document.dispatchEvent(reindexevent);
             lastPostTime = Date.now();
-            lastPostCount = clickObjects.length;
+            lastPostCount = newclickObjects.length;
         }
     }
 }
