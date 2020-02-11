@@ -3,7 +3,7 @@ Voice plugin Javascript SDK Library
 IMPORTANT NOTE: Copying this library and hosting it locally is strongly discouraged.
  */
 // creating the sdk variable
-if (typeof Voicepluginsdk == 'undefined') {
+if (typeof Voicepluginsdk === 'undefined') {
 	var badBrowser=false;
 	if(navigator.appName.indexOf("Internet Explorer") !== -1){
 		badBrowser=(navigator.appVersion.indexOf("MSIE 1") === -1);
@@ -13,10 +13,8 @@ if (typeof Voicepluginsdk == 'undefined') {
 
 	// initializing voice recognition library
 	if(!window.hasOwnProperty("webkitSpeechRecognition")){
-		// console.log("speechkit not available");
 		speechrecognitionavailable=false;
 	} else {
-		// console.log("speechkit available");
 		speechrecognitionavailable=true;
 		voiceRecognition = window.webkitSpeechRecognition;
 	}
@@ -27,20 +25,20 @@ if (typeof Voicepluginsdk == 'undefined') {
 	});
 
 	document.addEventListener("Usersessiondata", function(data) {
-		// console.log("received user session data");
 		Voicepluginsdk.createsession(JSON.parse(data.detail.data));
 	});
 
 	document.addEventListener("AuthenticatedUsersessiondata", function(data) {
-		// console.log("received authenticated user session data");
 		Voicepluginsdk.createsession(JSON.parse(data.detail.data));
 		Voicepluginsdk.openmodal();
 	});
 
 	document.addEventListener("Alertmessagedata", function(data) {
-		// console.log("received alert message");
 		alert(JSON.parse(data.detail.data));
 	});
+
+	var debugsetevent = new CustomEvent("Debugsetevent", {detail: {data: {action:'Debugvalueset',value:voicedebug}}, bubbles: false, cancelable: false});
+	document.dispatchEvent(debugsetevent);
 
 	// initializing the sdk variable need to change to a new variable in future.
 	var Voicepluginsdk = {
@@ -82,12 +80,15 @@ if (typeof Voicepluginsdk == 'undefined') {
 		elastic:{apiurl:"http://localhost:9200",indexname:"nistapp",currentpage:0,querystring:""},
 		navigationcookiename:"nistnavshow",
 		autoplay:false,
+		processcount:0,
+		totalcount:0,
+		rerenderhtml:true,
 		processingnodes:false,
 		processedclickobjectscount:0,
+		recording:false,
 		inarray:function(value,object){
 			return jQuery.inArray(value, object);
 		},
-
 		// constructor for the sdk class which will be initialized on loading of the variable.
 		init: function() {
 			// loading jquery if not available
@@ -166,7 +167,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		otherscripts: function(){
 			this.totalotherScripts=1;
-			this.loadCssScript(this.extensionpath+"css/extension-v0.1.2.css");
+			this.loadCssScript(this.extensionpath+"css/extension.css");
 			this.loadOtherScript(this.extensionpath+"js/domJSON.js");
 		},
 		allReady: function() {
@@ -193,24 +194,21 @@ if (typeof Voicepluginsdk == 'undefined') {
 
 			// adding speech recognition functionality based on the library availability
 			if(speechrecognitionavailable){
-				// console.log("speech recognition available");
 				this.recognition = new voiceRecognition();
 				this.speechrecognitionavailable = true;
 				
 				this.recognition.onstart = function() {
 					textfromspeech = "";
-					// console.log("speech started");
-					// console.log('Voice recognition activated. Try speaking into the microphone.');
 				};
 
 				this.recognition.onspeechend = function() {
-					// console.log("speech ended");
+
 				};
 
 				this.recognition.onerror = function(event) {
 					if(event.error === 'no-speech') {
-						// console.log('No speech was detected. Try again.');
-					};
+						alert('No speech was detected. Try again.');
+					}
 				};
 
 				this.recognition.onresult = function(event) {
@@ -223,22 +221,21 @@ if (typeof Voicepluginsdk == 'undefined') {
 					}
 				};
 			}
-			
+
 			this.ready = true;
 
 			// listen for when to start the indexing of the dom based on the clicknodes availability
 			document.addEventListener("Indexnodes", function(data) {
-				//console.log(data);
-				if(data.detail.data=="indexclicknodes") {
+				if(data.detail.data==="indexclicknodes") {
 					Voicepluginsdk.indexclicknodes();
-				} else if(data.detail.data=="indexnewclicknodes") {
+				} else if(data.detail.data==="indexnewclicknodes") {
 					Voicepluginsdk.indexnewclicknodes();
 				}
 			});
 
 			// We need to wait till all dom content is loaded. We initially used a standard wait time but shifted to
 			//      use https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event
-			//      This still produces some discrepancy where some nodes are not being processed.
+			//      This still produces some discrepancy where it hangs up the web page.
 			//      This needs to be improved at some point.
 			window.addEventListener('load', (event) => {
 				Voicepluginsdk.modifybodyhtml();
@@ -254,15 +251,13 @@ if (typeof Voicepluginsdk == 'undefined') {
 			for(var i = 0; i < cookieArr.length; i++) {
 				var cookiePair = cookieArr[i].split("=");
 
-				/* Removing whitespace at the beginning of the cookie name
-				and compare it with the given string */
-				if(cookiename == cookiePair[0].trim()) {
+				// Removing whitespace at the beginning of the cookie name and compare it with the given string
+				if(cookiename === cookiePair[0].trim()) {
 					// Decode the cookie value and return
 					cookievalue = decodeURIComponent(cookiePair[1]);
 				}
 			}
 
-			// Return null if not found
 			return cookievalue;
 		},
 		checkuserkeyexists:function(){
@@ -303,9 +298,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			jQuery(document.body).prepend(html);
 
 			if(typeof isvoicesdk === 'undefined') {
-				var bodyhtml = document.body.innerHTML;
-				jQuery(window).trigger('resize');
-				jQuery(document.body).promise().done(function () {
+				jQuery(window).trigger('resize').promise().done(function () {
 					Voicepluginsdk.indexclicknodes();
 					Voicepluginsdk.addbuttonhtml();
 				});
@@ -313,38 +306,25 @@ if (typeof Voicepluginsdk == 'undefined') {
 				Voicepluginsdk.indexclicknodes();
 				Voicepluginsdk.addbuttonhtml();
 			}
+			setInterval(function () {
+				Voicepluginsdk.indexnewclicknodes();
+			},POST_INTERVAL);
 		},
 		addbuttonhtml:function(){
 			jQuery("#nistBtn").unbind("click").html("");
-			var addnisticon=true;
-			var checkrecording = this.getstoragedata(this.recordingcookiename);
-			var buttonhtml="<img src=\""+this.extensionpath+"assets/uda-logo.png\" width=\"50px\" height=\"50px\" nist-voice=\"true\">";
-			jQuery("#nistBtn").append(buttonhtml);
+			var buttonhtml='<img src="'+this.extensionpath+'assets/uda-logo.png" width="50px" height="50px" nist-voice="true">';
 			var modal =jQuery("#nistBtn");
+			modal.append(buttonhtml);
 			modal.click(function () {
 				Voicepluginsdk.openmodal();
 			});
-			if(checkrecording){
-				var checkrecordingdata=JSON.parse(checkrecording);
-				if(checkrecordingdata.hasOwnProperty("recording") && checkrecordingdata.recording){
-					addnisticon=false;
-					this.openmodal();
-				}
-			}
-			if(addnisticon){
-				this.addvoicesearchmodal(addnisticon);
-				window.onclick = function(event) {
-					if (event.target == modal) {
-						Voicepluginsdk.closemodal();
-					}
-				}
-			} else {
-				this.addvoicesearchmodal(addnisticon);
-				this.showrecordedresults();
+			if(this.rerenderhtml) {
+				this.showhtml();
 			}
 		},
 		addvoicesearchmodal:function(addnisticon=true){
-			var recbtn ='	   <button nist-voice="true" id="nistvoicerecbtn" class="voice-record-img"><img nist-voice="true" style="vertical-align:middle" src="'+this.extensionpath+'assets/voice-record.png"> <span nist-voice="true">Rec</span></button>';
+			// var recbtn ='	   <button nist-voice="true" id="nistvoicerecbtn" class="voice-record-img"><img nist-voice="true" style="vertical-align:middle" src="'+this.extensionpath+'assets/voice-record.png"> <span nist-voice="true">Rec</span></button>';
+			var recbtn ='	   <button nist-voice="true" id="nistvoiceadvbtn" class="voice-record-img"><span nist-voice="true">Advanced</span></button>';
 
 			if(!addnisticon){
 				recbtn ='	   <button nist-voice="true" id="nistvoicerecstpbtn" class="voice-record-img"><img nist-voice="true" style="vertical-align:middle" src="'+this.extensionpath+'assets/voice-stop.png"> <span nist-voice="true">Stop</span></button>';
@@ -358,13 +338,13 @@ if (typeof Voicepluginsdk == 'undefined') {
 						'	<div class="voice-red-hr-line"></div>'+
 						// '	<button class="voice-suggesion-lbl">Create a new issue</button><button class="voice-suggesion-lbl">Assign an issue to Ajay</button><button class="voice-suggesion-lbl">Show list of issues assigned to me</button><br>'+
 						'	<div class="voice-srch-bg">'+
-						'		<span class="voice-srch"><img src="'+this.extensionpath+'assets/voice-search.png"></span><input type="search" class="voice-srch-fld"  id="voicesearchinput" placeholder="Search..." />' +
+						'		<span class="voice-srch"><img src="'+this.extensionpath+'assets/voice-search.png"></span><input type="search" class="voice-srch-fld" nist-voice="true" id="voicesearchinput" placeholder="Search..." />' +
 						'       <span id="nist-voice-icon-start" class="voice-voice-srch" nist-voice="true"><img nist-voice="true" src="'+this.extensionpath+'assets/voice-voice.png" /></span>'+
 						'       <span style="display:none;" class="voice-voice-srch" id="nist-voice-icon-stop" nist-voice="true"><img src="'+this.extensionpath+'assets/stop.png" nist-voice="true" /></span>' +
 						'	</div>'+
 								recbtn +
 						'<div class="nist-clear"></div>'+
-						'   <div id="nistvoicesearchresults"></div>'
+						'   <div id="nistvoicesearchresults"></div>'+
 						'</div>';
 			jQuery("#voicemodalhtml").html(html);
 			jQuery("#closenistmodal").click(function(){
@@ -374,9 +354,8 @@ if (typeof Voicepluginsdk == 'undefined') {
 				Voicepluginsdk.searchinelastic();
 			});
 			jQuery("#voicesearchinput").keydown(function (e) {
-				if (e.keyCode == 13) {
+				if (e.keyCode === 13) {
 					jQuery("#nistvoicesearchresults").html("");
-					// Voicepluginsdk.searchnodes();
 					Voicepluginsdk.searchinelastic();
 					return false;
 				}
@@ -384,13 +363,11 @@ if (typeof Voicepluginsdk == 'undefined') {
 			if(speechrecognitionavailable){
 				jQuery("#nist-voice-icon-start").click(function () {
 					jQuery("#nistvoicesearchresults").html("");
-					// console.log("starting voice recognition");
 					Voicepluginsdk.recognition.start();
 					jQuery("#nist-voice-icon-start").hide();
 					jQuery("#nist-voice-icon-stop").show();
 				});
 				jQuery("#nist-voice-icon-stop").click(function () {
-					// console.log("stopping voice recognition");
 					Voicepluginsdk.recognition.stop();
 					jQuery("#nist-voice-icon-stop").hide();
 					jQuery("#nist-voice-icon-start").show();
@@ -400,8 +377,11 @@ if (typeof Voicepluginsdk == 'undefined') {
 				jQuery("#nist-voice-icon-stop").hide();
 			}
 			if(addnisticon) {
-				jQuery("#nistvoicerecbtn").click(function () {
+				/*jQuery("#nistvoicerecbtn").click(function () {
 					Voicepluginsdk.gettimestamp("start");
+				});*/
+				jQuery("#nistvoiceadvbtn").click(function () {
+					Voicepluginsdk.showadvancedhtml();
 				});
 			} else {
 				jQuery("#nistvoicerecstpbtn").click(function () {
@@ -415,9 +395,10 @@ if (typeof Voicepluginsdk == 'undefined') {
 				jQuery("#nistBtn").hide();
 				jQuery('#steps-content').show();
 				jQuery("#nistModal").css("display", "block");
-				jQuery("#voicesearchinput").val("");
+				var searchinput=jQuery("#voicesearchinput");
+				searchinput.val("");
 				if (focus) {
-					jQuery("#voicesearchinput").focus();
+					searchinput.focus();
 				}
 			} else {
 				var sessionevent = new CustomEvent("RequestSessiondata", {detail: {data: "authtenicate"}, bubbles: false, cancelable: false});
@@ -438,47 +419,53 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		//render the required html for showing up the proper html
 		showhtml:function(){
+			this.rerenderhtml=false;
+			var addnisticon=true;
 			var checkrecording = this.getstoragedata(this.recordingcookiename);
-			if(checkrecording) {
-				var checkrecordingdata = JSON.parse(checkrecording);
-				if (checkrecordingdata.hasOwnProperty("recording") && checkrecordingdata.recording) {
-					return false;
+			if(checkrecording){
+				var checkrecordingdata=JSON.parse(checkrecording);
+				if(checkrecordingdata.hasOwnProperty("recording") && checkrecordingdata.recording){
+					addnisticon=false;
+					this.recording=true;
+					this.openmodal();
 				}
 			}
-			var navigationcookie=this.getstoragedata(this.navigationcookiename);
-			if(navigationcookie){
-				var navigationcookiedata = JSON.parse(navigationcookie);
-				if(navigationcookiedata.shownav) {
-					this.openmodal();
-					if(navigationcookiedata.autoplay){
-						this.autoplay=true;
+			if(addnisticon){
+				this.addvoicesearchmodal(addnisticon);
+				var navigationcookie=this.getstoragedata(this.navigationcookiename);
+				if(navigationcookie){
+					var navigationcookiedata = JSON.parse(navigationcookie);
+					if(navigationcookiedata.shownav) {
+						this.openmodal();
+						if(navigationcookiedata.autoplay){
+							this.autoplay=true;
+						}
+						this.showselectedrow(navigationcookiedata.data,navigationcookiedata.data.id,true, navigationcookiedata);
 					}
-					this.showselectedrow(navigationcookiedata.data,navigationcookiedata.data.id,true, navigationcookiedata);
 				}
+			} else {
+				this.addvoicesearchmodal(addnisticon);
+				this.showrecordedresults();
 			}
 		},
 		// indexing all nodes after all the clicknodes are available
 		indexclicknodes: function(){
-			var processcount=clickObjects.length;
+			this.processcount=clickObjects.length;
 			this.previousurl=this.currenturl=window.location.href;
-			postmessage=false;
 			this.processingnodes=true;
-			this.processedclickobjectscount=processcount;
-			// indexing functionality called
+			// indexing method called
 			this.indexdom(document.body);
-			var totalcount=clickObjects.length;
-			postmessage = true;
-			startmutationslistner = true;
+			this.processedclickobjectscount=this.processcount;
+			this.totalcount=clickObjects.length;
 			this.processingnodes=false;
-			if(processcount<totalcount){
+			if(this.processcount<this.totalcount){
 				//	todo refine the processing nodes.
 				this.indexnewclicknodes();
 				return;
 			}
 			//send all the indexnodes to server
-			// this.sendtoserver();
-			if(processcount==totalcount) {
-				this.showhtml();
+			if(this.processcount===this.totalcount) {
+				// this.sendtoserver();
 			}
 		},
 		// indexing new clicknodes after new html got loaded
@@ -486,33 +473,26 @@ if (typeof Voicepluginsdk == 'undefined') {
 			if(this.processingnodes){
 				return;
 			}
-			var processcount=clickObjects.length;
-			if(this.processedclickobjectscount===processcount){
+			this.processcount=clickObjects.length;
+			if(this.processedclickobjectscount===this.processcount){
 				return;
 			}
-			postmessage=false;
 			this.processingnodes=true;
-			this.processedclickobjectscount=processcount;
 			this.removefromhtmlindex();
 			this.indexnewnodes=true;
 			this.currenturl=window.location.href;
 			this.indexdom(document.body);
-			postmessage=true;
+			this.processedclickobjectscount=this.processcount;
 			this.processingnodes=false;
-			var totalcount=clickObjects.length;
-			if(processcount<totalcount){
+			this.totalcount=clickObjects.length;
+			if(this.processcount<this.totalcount){
 				//todo new nodes added need to reprocess
-				this.indexnewclicknodes();
+				// this.indexnewclicknodes();
 				return;
 			}
 			// send all the indexed nodes to server
-			if(processcount==totalcount) {
-				// postmessage=false;
-				this.addbuttonhtml();
-				this.showhtml();
-			}
-			if(this.processedclickobjectscount===totalcount){
-				this.sendtoserver();
+			if(this.processedclickobjectscount===this.totalcount){
+				// this.sendtoserver();
 			}
 		},
 		removefromhtmlindex:function(){
@@ -521,8 +501,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				for(var htmli=0;htmli<this.htmlindex.length;htmli++){
 					var checknode=this.htmlindex[htmli];
 					for (var i = 0; i < clickObjects.length; i++) {
-						// console.log(clickObjects[i]);
-						if(clickObjects[i].element==window){
+						if(clickObjects[i].element === window){
 							continue;
 						}
 						if (checknode['element-data'].isEqualNode(clickObjects[i].element)) {
@@ -539,7 +518,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			switch (node.nodeType) {
 				case Node.ELEMENT_NODE:
 
-					if(!ret && parentnode!="") {
+					if(!ret && parentnode!=="") {
 						node = this.indexnode(node, parentnode);
 					}
 
@@ -554,22 +533,9 @@ if (typeof Voicepluginsdk == 'undefined') {
 							for (var i=0;i<childnodes.length;i++){
 								var childnode=childnodes[i];
 								this.nodeid++;
-								if(node.hasOwnProperty("displaytype") && node.displaytype === "tab-content") {
-									childnode.displaytype = node.displaytype;
-									childnode.tabid = node.tabid;
-								}
-								if(node.hasOwnProperty("navtype") && node.navtype === "navtab") {
-									if(node.getAttribute("href")) {
-										this.menuitems.push({
-											'name': node.textContent.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim(),
-											'refid': node.getAttribute("href").replace("#",""),
-											'menunode': node
-										});
-									}
-								}
-								if(this.ignoreelements.indexOf(childnode.nodeName.toLowerCase())==-1) {
+								if(this.ignoreelements.indexOf(childnode.nodeName.toLowerCase())===-1) {
 									if(ret){
-										if(textlabel==""){
+										if(textlabel===""){
 											textlabel = this.indexdom(childnode, ret, node, textlabel);
 										}else {
 											textlabel += " " + this.indexdom(childnode, ret, node, textlabel);
@@ -583,13 +549,13 @@ if (typeof Voicepluginsdk == 'undefined') {
 					}
 					break;
 				case Node.TEXT_NODE:
-					if(node.nodeValue!="") {
+					if(node.nodeValue!=="") {
 						textlabel = node.nodeValue;
 					}
 					break;
 			}
 
-			if(ret && textlabel!=""){
+			if(ret && textlabel!==""){
 				return textlabel;
 			} else if(!ret) {
 				return node;
@@ -620,8 +586,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			}
 
 			for (var i = 0; i < clickObjects.length; i++) {
-				// console.log(clickObjects[i]);
-				if(clickObjects[i].element==window){
+				if(clickObjects[i].element===window){
 					continue;
 				}
 				if (node.isEqualNode(clickObjects[i].element)) {
@@ -630,7 +595,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				}
 			}
 
-			if(node.hasAttribute("type") && node.getAttribute("type") == "hidden"){
+			if(node.hasAttribute("type") && node.getAttribute("type") === "hidden"){
 				return node;
 			}
 
@@ -648,18 +613,18 @@ if (typeof Voicepluginsdk == 'undefined') {
 					node.displaytype = "tab-content";
 				}
 
-				if(elementdata["element-labels"].length==0){
+				if(elementdata["element-labels"].length===0){
 					elementdata["element-labels"] = this.getInputLabels(node,[],1);
 				}
 
-				if(elementdata["element-labels"].length==0){
+				if(elementdata["element-labels"].length===0){
 					return node;
 				}
 
-				if((node.hasOwnProperty("displaytype") && node.displaytype=="tab-content") || (node.hasOwnProperty("navtype") && node.navtype=="navtab")){
+				if((node.hasOwnProperty("displaytype") && node.displaytype==="tab-content") || (node.hasOwnProperty("navtype") && node.navtype==="navtab")){
 					for(var j=0;j<this.menuitems.length;j++){
 						var menuitem=this.menuitems[j];
-						if(menuitem.refid == node.tabid) {
+						if(menuitem.refid === node.tabid) {
 							if(menuitem.menunode.hasOwnProperty("path")){
 								node.path =  menuitem.menunode.path+">"+menuitem.name;
 							}else {
@@ -675,13 +640,13 @@ if (typeof Voicepluginsdk == 'undefined') {
 					}
 				}
 
-				if(elementdata["element-path"]=="") {
+				if(elementdata["element-path"]==="") {
 					if (node.hasOwnProperty("path")) {
 						elementdata["element-path"] = node.path;
 					}
 				}
 
-				if(node.getAttribute("data-toggle") && node.getAttribute("data-toggle")=="tab"){
+				if(node.getAttribute("data-toggle") && node.getAttribute("data-toggle")==="tab"){
 					node.navtype="navtab";
 					elementdata["element-action"] = "navtab";
 				}
@@ -693,6 +658,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				// add click to node to send what user has clicked.
 				this.addClickToNode(node);
 			}
+
 			return node;
 		},
 		// getting the text for the clicknodes.
@@ -702,7 +668,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				ignorenode=node;
 			}
 
-			if((node.nodeName.toLowerCase() === "select" || node.nodeName.toLowerCase() === "checkbox") && iterate && inputlabels.length==0){
+			if((node.nodeName.toLowerCase() === "select" || node.nodeName.toLowerCase() === "checkbox") && iterate && inputlabels.length===0){
 				iterationno++;
 				inputlabels = this.getInputLabels(node.parentNode, inputlabels, iterationno, iterate, true, fromclick, iteratelimit, ignorenode);
 				if(fromclick) {
@@ -713,35 +679,35 @@ if (typeof Voicepluginsdk == 'undefined') {
 			if(getchildlabels && node.childNodes.length>0){
 				var childnodes = node.childNodes;
 				childnodes.forEach(function (childnode, key) {
-					if(childnode.nodeName.toLowerCase()!="script" || childnode.nodeName.toLowerCase()!="select") {
+					if(childnode.nodeName.toLowerCase()!=="script" || childnode.nodeName.toLowerCase()!=="select") {
 						var textcontent = childnode.textContent.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
-						if (textcontent != "" && ignorenode.isEqualNode(childnode) == false) {
+						if (textcontent !== "" && ignorenode.isEqualNode(childnode) === false) {
 							inputlabels.push({"text": textcontent, "match": false});
 						}
 					}
 				});
 			}
 
-			if(inputlabels.length==0 && node.getAttribute("data-tooltip")){
+			if(inputlabels.length===0 && node.getAttribute("data-tooltip")){
 				inputlabels.push({"text":node.getAttribute("data-tooltip").toString(),"match":false});
 			}
 
-			if(inputlabels.length==0 && node.getAttribute("aria-label")){
+			if(inputlabels.length===0 && node.getAttribute("aria-label")){
 				inputlabels.push({"text":node.getAttribute("aria-label").toString(),"match":false});
 			}
 
 			//todo fix for image tags
-			if(iterate && node.nodeName.toLowerCase() != "img" && inputlabels.length == 0 && iterationno<=iteratelimit){
+			if(iterate && node.nodeName.toLowerCase() !== "img" && inputlabels.length === 0 && iterationno<=iteratelimit){
 				iterationno++;
 				inputlabels = this.getInputLabels(node.parentNode,[], iterationno, iterate, getchildlabels, fromclick, iteratelimit);
 			}
 
 			if(node.nodeName.toLowerCase() === "input" || node.nodeName.toLowerCase() === "textarea" || node.nodeName.toLowerCase() === "img"){
 
-				if(node.getAttribute("placeholder") && node.getAttribute("placeholder")!="") {
+				if(node.getAttribute("placeholder") && node.getAttribute("placeholder")!=="") {
 					inputlabels.push({"text":node.getAttribute("placeholder").toString(),"match":false});
 				}
-				if(node.getAttribute("type") && (node.getAttribute("type")=="submit" || node.getAttribute("type")=="file")) {
+				if(node.getAttribute("type") && (node.getAttribute("type")==="submit" || node.getAttribute("type")==="file")) {
 					if(node.getAttribute("value")){
 						inputlabels.push({"text":node.getAttribute("value").toString(),"match":false});
 					}
@@ -749,6 +715,10 @@ if (typeof Voicepluginsdk == 'undefined') {
 				if(node.getAttribute("alt")){
 					inputlabels.push({"text":node.getAttribute("alt").toString(),"match":false});
 				}
+			}
+
+			if(inputlabels.length===0 && node.id!==""){
+				inputlabels.push({"text":(node.nodeName.toLowerCase()+"-"+node.id),"match":false});
 			}
 
 			return inputlabels;
@@ -835,7 +805,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 		searchnodes: function(){
 			var searchtext = jQuery("#voicesearchinput").val();
 			var matchnodes = [];
-			if(searchtext != "" && this.htmlindex.length>0){
+			if(searchtext !== "" && this.htmlindex.length>0){
 				for(var i=0;i<this.htmlindex.length;i++){
 					var searchnode = this.htmlindex[i];
 					var searchlabelexists=false;
@@ -852,7 +822,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				}
 			}
 			if(matchnodes.length>0){
-				if(matchnodes.length==1){
+				if(matchnodes.length===1){
 					this.matchaction(matchnodes[0]);
 					return;
 				}
@@ -890,7 +860,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				Voicepluginsdk.matchaction(data);
 			});
 			jQuery("#nist-voiceresultrow").append(element);
-			if(data['element-path']!=""){
+			if(data['element-path']!==""){
 				var paths=data['element-path'].split(">");
 				if(paths.length>0){
 					for (var i=0;i<paths.length;i++){
@@ -1026,8 +996,8 @@ if (typeof Voicepluginsdk == 'undefined') {
 				xhr.open("POST", this.apihost+"/clickevents/", true);
 				xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 				xhr.onload = function(event){
-					if(xhr.status == 200){
-						startmutationslistner=true;
+					if(xhr.status === 200){
+
 					} else {
 						console.log(xhr.status+" : "+xhr.statusText);
 					}
@@ -1057,7 +1027,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 				return true;
 			}
 
-			if(node.nodeName.toLowerCase()=="input" && node.getAttribute("type")=="radio"){
+			if(node.nodeName.toLowerCase()==="input" && node.getAttribute("type")==="radio"){
 				var postdata = {
 					domain: window.location.host,
 					urlpath: window.location.pathname,
@@ -1095,21 +1065,30 @@ if (typeof Voicepluginsdk == 'undefined') {
 				};
 			}
 			postdata.clickednodename = this.getclickedinputlabels(node,fromdocument,selectchange);
+			this.rerenderhtml=true;
 			this.addclickedrecordcookie(postdata.clickednodename);
 			var outputdata = JSON.stringify(postdata);
 			var xhr = new XMLHttpRequest();
 			xhr.open("POST", this.apihost+"/user/clickednode");
 			xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					// console.log(xhr.response);
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
 				}
 			};
 			xhr.send(outputdata);
+
 			//processing new clicknodes if available after the click action.
-			setTimeout(function (){Voicepluginsdk.indexnewclicknodes();},POST_INTERVAL);
+			// setTimeout(function (){Voicepluginsdk.indexnewclicknodes();},POST_INTERVAL);
+
+			// rerender html if recording is enabled.
+			if(node.nodeName.toLowerCase()!=='select' && this.recording) {
+				setTimeout(function () {
+					Voicepluginsdk.showhtml();
+				}, POST_INTERVAL);
+			}
 		},
 		//getting input label for the clicked node
 		getclickedinputlabels:function(node, fromdocument=false, selectchange=false){
@@ -1131,20 +1110,41 @@ if (typeof Voicepluginsdk == 'undefined') {
 					}
 					break;
 				case "input":
-					switch (node.getAttribute("type").toLowerCase()) {
-						default:
-							var textlabels = this.getInputLabels(node, [], 1, true, true, true);
-							if (textlabels.length > 0) {
-								var labels = [];
-								for (var j = 0; j < textlabels.length; j++) {
-									labels.push(textlabels[j].text);
-								}
-								inputlabels = labels.toString();
+					if(!node.hasAttribute("type")){
+						var textlabels = this.getInputLabels(node, [], 1, true, true, true);
+						if (textlabels.length > 0) {
+							var labels = [];
+							for (var j = 0; j < textlabels.length; j++) {
+								labels.push(textlabels[j].text);
 							}
+							inputlabels = labels.toString();
+						}
+					} else {
+						switch (node.getAttribute("type").toLowerCase()) {
+							default:
+								var textlabels = this.getInputLabels(node, [], 1, true, true, true);
+								if (textlabels.length > 0) {
+									var labels = [];
+									for (var j = 0; j < textlabels.length; j++) {
+										labels.push(textlabels[j].text);
+									}
+									inputlabels = labels.toString();
+								}
+						}
+						break;
 					}
-					break;
 				case "textarea":
 					var textlabels = this.getInputLabels(node, [], 1, true, true, true);
+					if (textlabels.length > 0) {
+						var labels = [];
+						for (var j = 0; j < textlabels.length; j++) {
+							labels.push(textlabels[j].text);
+						}
+						inputlabels = labels.toString();
+					}
+					break;
+				case "img":
+					var textlabels = this.getInputLabels(node, [], 1, true, false, true);
 					if (textlabels.length > 0) {
 						var labels = [];
 						for (var j = 0; j < textlabels.length; j++) {
@@ -1173,11 +1173,11 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		//adding current timestamp to the required actions under recording functionality
 		gettimestamp:function(buttonclicked){
-			if(buttonclicked != "") {
+			if(buttonclicked !== "") {
 				var result = Date.now();
-				if(buttonclicked=="start"){
+				if(buttonclicked==="start"){
 					this.startrecordingsequence(result);
-				} else if(buttonclicked=="stop"){
+				} else if(buttonclicked==="stop"){
 					this.stoprecordingsequence(result);
 				}
 			}
@@ -1198,7 +1198,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			var xhr = new XMLHttpRequest();
 			xhr.open("GET", this.apihost+"/clickevents/fetchrecorddata?start="+starttime+"&end="+endtime+"&sessionid="+Voicepluginsdk.sessionID+"&domain="+recordingcookiedata.domain, true);
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					Voicepluginsdk.addrecordresultshtml(JSON.parse(xhr.response));
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
@@ -1219,7 +1219,10 @@ if (typeof Voicepluginsdk == 'undefined') {
 			}
 			recordingcookiedata.domain = window.location.host;
 			this.createstoragedata(this.recordingcookiename,JSON.stringify(recordingcookiedata));
-			this.addbuttonhtml();
+			this.showhtml();
+
+			//add analtytics
+			this.recordclick('recordingstart',recordingcookiedata.domain);
 		},
 		//stop recording sequence that has been started and show recorded results
 		stoprecordingsequence:function(currenttimestamp){
@@ -1232,13 +1235,16 @@ if (typeof Voicepluginsdk == 'undefined') {
 				return false;
 			}
 			this.createstoragedata(this.recordingcookiename,JSON.stringify(recordingcookiedata));
-			this.addbuttonhtml();
-			this.addvoicesearchmodal(true);
+
+			//add analtytics
+			this.recordclick('recordingstop',recordingcookiedata.domain);
+
+			this.showhtml();
 			jQuery("#nistvoicesearchresults").html("");
 			var xhr = new XMLHttpRequest();
 			xhr.open("GET", this.apihost+"/clickevents/fetchrecorddata?start="+recordingcookiedata.starttime+"&end="+recordingcookiedata.endtime+"&sessionid="+Voicepluginsdk.sessionID+"&domain="+recordingcookiedata.domain, true);
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					Voicepluginsdk.addrecordresultshtml(JSON.parse(xhr.response));
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
@@ -1259,9 +1265,12 @@ if (typeof Voicepluginsdk == 'undefined') {
 			this.createstoragedata(this.recordingcookiename,JSON.stringify(recordingcookiedata));
 			var navcookiedata = {shownav: false, data: {}, autoplay:false, pause:false, stop:false, navcompleted:false, navigateddata:[],searchterm:''};
 			this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata));
+
+			//add analtytics
+			this.recordclick('recordingcancel',recordingcookiedata.domain);
+
 			if(render) {
-				this.addbuttonhtml();
-				this.addvoicesearchmodal(true);
+				this.showhtml();
 			}
 		},
 		//show sequence list html
@@ -1274,7 +1283,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 							'			<ul id="nist-recordresultrow" class="voice-sugggesion-bullet">'+
 							'			</ul>'+
 							'			<div>'+
-							'				<input id="nistsequencelabel" type="text" name="save-recrded" class="voice-save-recrded-inpt" placeholder="Enter label">'+
+							'				<input id="nistsequencelabel" type="text" name="save-recrded" class="voice-save-recrded-inpt" placeholder="Enter label" nist-voice="true">'+
 							'				<button class="voice-cancel-btn" onclick="Voicepluginsdk.cancelrecordingsequence();">Cancel and exit</button> <button onclick="Voicepluginsdk.submitrecordedlabel();" class="voice-submit-btn">Submit</button>'+
 							'			</div>'+
 							'		</div>'+
@@ -1284,8 +1293,6 @@ if (typeof Voicepluginsdk == 'undefined') {
 					this.renderrecordresultrow(data[i],i);
 				}
 				this.openmodal(false);
-			} else {
-				this.showhtml();
 			}
 		},
 		//render record row html of the sequence
@@ -1298,26 +1305,42 @@ if (typeof Voicepluginsdk == 'undefined') {
 			jQuery("#nist-recordresultrow").append(element);
 		},
 		// submit functionality of the recorded sequence.
-		submitrecordedlabel:function(){
+		submitrecordedlabel:function(submittype="recording"){
 			var sequencename=jQuery("#nistsequencelabel").val();
-			if(sequencename==''){
-				alert('Please enter proper label');
-				jQuery("#nistsequencelabel").focus();
-				return false;
+			var sequencelistdata={name:"",domain:window.location.host,usersessionid:this.sessiondata.authdata.id.toString(),userclicknodelist:[].toString(),userclicknodesSet:this.recordedsequenceids,isValid:1,isIgnored:0};
+			if(submittype==='recording') {
+				if (sequencename === '') {
+					alert('Please enter proper label');
+					jQuery("#nistsequencelabel").focus();
+					return false;
+				}
+			} else if(submittype === 'invalid'){
+				if(sequencename===''){
+					sequencename="Declared as not valid sequence by user";
+				}
+				sequencelistdata.isValid=0;
+			} else if(submittype === 'ignore'){
+				if(sequencename===''){
+					sequencename="Ignored by user";
+				}
+				sequencelistdata.isValid=0;
+				sequencelistdata.isIgnored=1;
 			}
 			var sequenceids = [];
 			for(var i=0;i<this.recordedsequenceids.length;i++){
 				sequenceids.push(this.recordedsequenceids[i].id);
 			}
-
-			var sequencelistdata={name:sequencename,domain:window.location.host,usersessionid:this.sessionID,userclicknodelist:sequenceids.toString(),userclicknodesSet:this.recordedsequenceids};
+			sequencelistdata.name=sequencename;
+			sequencelistdata.userclicknodelist=sequenceids.toString();
+			// var sequencelistdata={name:sequencename,domain:window.location.host,usersessionid:this.sessionID,userclicknodelist:sequenceids.toString(),userclicknodesSet:this.recordedsequenceids};
+			console.log(sequencelistdata);
 			this.cancelrecordingsequence(true);
 			var xhr = new XMLHttpRequest();
 			xhr.open("POST", this.apihost + "/clickevents/recordsequencedata", true);
 			xhr.setRequestHeader('Content-Type', 'application/json');
 			xhr.onload = function(event){
-				if(xhr.status == 200){
-					Voicepluginsdk.closemodal();
+				if(xhr.status === 200){
+					Voicepluginsdk.backtomodal();
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
 				}
@@ -1336,10 +1359,14 @@ if (typeof Voicepluginsdk == 'undefined') {
 				var searchtext = jQuery("#voicesearchinput").val();
 			}
 			this.cancelrecordingsequence(false);
+
+			//add analtytics
+			this.recordclick('search',searchtext);
+
 			var xhr = new XMLHttpRequest();
 			xhr.open("GET", this.apihost + "/clickevents/sequence/search?query="+searchtext+"&domain="+encodeURI(window.location.host), true);
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					Voicepluginsdk.renderelasticresults(JSON.parse(xhr.response));
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
@@ -1365,12 +1392,12 @@ if (typeof Voicepluginsdk == 'undefined') {
 		renderelasticresultrow:function(data){
 			var path='';
 			for(var i=0;i<data.userclicknodesSet.length;i++){
-				if(path!=''){
+				if(path!==''){
 					path +=' > ';
 				}
 				path += data.userclicknodesSet[i].clickednodename;
 			}
-			var html=   '	<div class="voice-sugtns-list"><h4><a>'+data.name.toString()+'</a></h4>'+
+			var html=   '	<div nist-voice="true" class="voice-sugtns-list"><h4><a>'+data.name.toString()+'</a></h4>'+
 						'		<p>'+path+'</p>'+
 						'	</div>';
 			var element=jQuery(html);
@@ -1385,10 +1412,12 @@ if (typeof Voicepluginsdk == 'undefined') {
 			navcookiedata.searchterm=jQuery("#voicesearchinput").val();
 			this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata));
 			this.showselectedrow(data,data.id,true, navcookiedata);
+			//add analtytics
+			this.recordclick('sequencerecord',data.name.toString(),data.id);
 		},
 		//showing the selected search result screen functionality
 		showselectedrow:function(data,index,shownodelist=false, navcookiedata={}){
-			if(shownodelist && navcookiedata.data.userclicknodesSet.length==navcookiedata.navigateddata.length){
+			if(shownodelist && navcookiedata.data.userclicknodesSet.length===navcookiedata.navigateddata.length){
 				navcookiedata.navcompleted=true;
 			}
 			var playiconhtml =  '<div class="voice-autoplay-stop">';
@@ -1434,16 +1463,19 @@ if (typeof Voicepluginsdk == 'undefined') {
 					visited = this.inarray(data.userclicknodesSet[i].id, navcookiedata.navigateddata);
 				}
 				if(navcookiedata.autoplay && (!navcookiedata.pause || !navcookiedata.stop)){
-					if(visited==-1 && !performactionnode){
+					if(visited===-1 && !performactionnode){
 						performactionnode=data.userclicknodesSet[i];
 					}
 				}
 				jQuery("#nistvoicesteps").append(this.rendersteps(data.userclicknodesSet[i],visited,navcookiedata));
 			}
-			if(this.sessionID==data.usersessionid){
+
+			if(this.sessionID===data.usersessionid || this.sessiondata.authdata.id===data.usersessionid){
 				jQuery("#deletesequence").click(function () {
 					Voicepluginsdk.deletesequencelist(data);
 				});
+			} else {
+				jQuery("#deletesequence").hide();
 			}
 
 			jQuery('#nist-upvote').click(function () {
@@ -1474,7 +1506,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 			} else {
 				var template = jQuery("<li nist-voice=\"true\" class=''>" + data.clickednodename + "</li>");
 			}
-			if(visited==-1) {
+			if(visited===-1) {
 				template.click(function () {
 					Voicepluginsdk.performclickaction(data,navcookiedata);
 				});
@@ -1492,11 +1524,14 @@ if (typeof Voicepluginsdk == 'undefined') {
 						var searchlabelexists=false;
 						var comparenode=domJSON.toJSON(searchnode["element-data"]);
 						var match=this.comparenodes(comparenode.node,originalnode.node);
-						if((match.matched+17)>=match.count){
+
+						if((match.matched+26)>=match.count){
 							searchlabelexists=true;
 						}
+
 						if(searchlabelexists){
 							var matchnodeexists=false;
+
 							if(matchnodes.length>0){
 								for(var j=0;j<matchnodes.length;j++){
 									if(matchnodes[j]["element-data"].isEqualNode(searchnode["element-data"])){
@@ -1504,6 +1539,7 @@ if (typeof Voicepluginsdk == 'undefined') {
 									}
 								}
 							}
+
 							if(matchnodeexists===false) {
 								matchnodes.push(searchnode);
 							}
@@ -1511,9 +1547,11 @@ if (typeof Voicepluginsdk == 'undefined') {
 					}
 				}
 			}
-			if(matchnodes.length == 1){
-				this.updatenavcookiedata(navcookiedata,selectednode.id);
-				this.matchaction(matchnodes[0],false,selectednode);
+
+			if(matchnodes.length === 1){
+				if(this.updatenavcookiedata(navcookiedata,selectednode.id)){
+					this.matchaction(matchnodes[0],false,selectednode);
+				}
 				return;
 			} else if(matchnodes.length>1) {
 				//todo need to perform some user intervention
@@ -1521,36 +1559,40 @@ if (typeof Voicepluginsdk == 'undefined') {
 				matchnodes.forEach(function (matchnode, matchnodeindex) {
 					if(matchnode.hasOwnProperty("element-data")) {
 						var inputlabels = Voicepluginsdk.getclickedinputlabels(matchnode["element-data"]);
-						if (inputlabels == selectednode.clickednodename) {
+						if (inputlabels === selectednode.clickednodename) {
 							finalmatchnode = matchnode;
 						}
 					}
 				});
+
 				if(finalmatchnode.hasOwnProperty("element-data")) {
-					this.updatenavcookiedata(navcookiedata,selectednode.id);
-					this.matchaction(finalmatchnode, false,selectednode);
+					if(this.updatenavcookiedata(navcookiedata,selectednode.id)) {
+						this.matchaction(finalmatchnode, false, selectednode);
+					}
 				}
 				return;
 			} else {
-				console.log("no clicknodes found");
 				alert("Unable to find the action");
 			}
 		},
 		//comparing nodes of indexed and the sequence step selected
 		comparenodes:function(comparenode,originalnode,match={count:0,matched:0}){
 			for(var key in originalnode){
+				if(key==="className" || key==='class'){
+					continue;
+				}
 				match.count++;
 				if(comparenode.hasOwnProperty(key) && (typeof originalnode[key] === 'object') && (typeof comparenode[key] === 'object')){
 					match.matched++
 					match=this.comparenodes(comparenode[key], originalnode[key],match);
 				} else if(comparenode.hasOwnProperty(key) && Array.isArray(originalnode[key]) && originalnode[key].length>0 && Array.isArray(comparenode[key]) && comparenode[key].length>0){
 					match.matched++;
-					if(comparenode[key].length==originalnode[key].length) {
+					if(comparenode[key].length===originalnode[key].length) {
 						for (var i = 0; i < originalnode[key].length; i++) {
 							match=this.comparenodes(comparenode[key][i], originalnode[key][i],match);
 						}
 					}
-				} else if(comparenode.hasOwnProperty(key) && comparenode[key]==originalnode[key]){
+				} else if(comparenode.hasOwnProperty(key) && comparenode[key]===originalnode[key]){
 					match.matched++;
 				}
 			}
@@ -1558,12 +1600,23 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		//adding data to the storage
 		createstoragedata:function(key,value){
-			window.localStorage.setItem(key, value);
+			try {
+				window.localStorage.setItem(key, value);
+				return true;
+			} catch (e) {
+				console.log(e);
+				return false;
+			}
 		},
 		//getting the data from the storage
 		getstoragedata:function(key){
-			var result=window.localStorage.getItem(key);
-			return result;
+			try {
+				var result=window.localStorage.getItem(key);
+				return result;
+			} catch (e) {
+				console.log(e);
+				return false;
+			}
 		},
 		//delete sequence list functionality for the owner
 		deletesequencelist:function(data){
@@ -1574,12 +1627,13 @@ if (typeof Voicepluginsdk == 'undefined') {
 		},
 		//confirmation for the deletion of the sequence list
 		confirmdelete:function (data) {
-			var senddata=JSON.stringify({usersessionid:this.sessionID,id:data.id});
+			// var senddata=JSON.stringify({usersessionid:this.sessionID,id:data.id});
+			var senddata=JSON.stringify({usersessionid:this.sessiondata.authdata.id,id:data.id});
 			var xhr = new XMLHttpRequest();
 			xhr.open("POST", this.apihost + "/clickevents/sequence/delete", true);
 			xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					Voicepluginsdk.closemodal();
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
@@ -1590,16 +1644,16 @@ if (typeof Voicepluginsdk == 'undefined') {
 		//adding vote functionality
 		addvote:function(votetype,data){
 			var senddata={"usersessionid": this.sessionID, "sequenceid" : data.id, "upvote":0, "downvote":0};
-			if(votetype=="up"){
+			if(votetype==="up"){
 				senddata.upvote=1;
-			} else if(votetype=="down"){
+			} else if(votetype==="down"){
 				senddata.downvote=1;
 			}
 			var xhr = new XMLHttpRequest();
 			xhr.open("POST", this.apihost + "/clickevents/sequence/addvote", true);
 			xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
 			xhr.onload = function(event){
-				if(xhr.status == 200){
+				if(xhr.status === 200){
 					// console.log(xhr.response);
 				} else {
 					console.log(xhr.status+" : "+xhr.statusText);
@@ -1612,27 +1666,106 @@ if (typeof Voicepluginsdk == 'undefined') {
 			if(navcookiedata.autoplay){
 				navcookiedata.autoplay=false;
 				this.autoplay=false;
+				//add analtytics
+				this.recordclick('stop',navcookiedata.data.name.toString(),navcookiedata.data.id);
 			} else {
 				navcookiedata.autoplay=true;
 				this.autoplay=true;
+				//add analtytics
+				this.recordclick('play',navcookiedata.data.name.toString(),navcookiedata.data.id);
 			}
+
 			this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata));
 			this.showselectedrow(navcookiedata.data,navcookiedata.data.id,true, navcookiedata);
 		},
 		//updating the navigated data
 		updatenavcookiedata:function(navcookiedata,selectednodeid){
 			navcookiedata.navigateddata.push(selectednodeid);
-			this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata));
+			return this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata));
 		},
 		//back to search results functionality
 		backtosearchresults:function (navcookiedata) {
-			if(navcookiedata.searchterm!=''){
+			if(navcookiedata.searchterm!==''){
 				var navcookiedata1 = {shownav: false, data: {}, autoplay:false, pause:false, stop:false, navcompleted:false, navigateddata:[],searchterm:navcookiedata.searchterm};
-				this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata1));
-				this.autoplay=false;
-				jQuery("#voicesearchinput").val(navcookiedata.searchterm);
-				this.searchinelastic(navcookiedata.searchterm);
+			} else {
+				var navcookiedata1 = {shownav: false, data: {}, autoplay:false, pause:false, stop:false, navcompleted:false, navigateddata:[],searchterm:""};
 			}
+			this.createstoragedata(this.navigationcookiename,JSON.stringify(navcookiedata1));
+			this.autoplay=false;
+			jQuery("#voicesearchinput").val(navcookiedata.searchterm);
+
+			//add analtytics
+			this.recordclick('back',navcookiedata.data.name.toString(),navcookiedata.data.id);
+
+			this.searchinelastic(navcookiedata.searchterm);
+		},
+		recordclick:function (clicktype='sequencerecord',clickedname='',recordid=0) {
+			var senddata={usersessionid:this.sessionID,clicktype:clicktype,clickedname:clickedname,recordid:recordid};
+			var xhr = new XMLHttpRequest();
+			xhr.open("PUT", this.apihost + "/clickevents/userclick", true);
+			xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+			xhr.onload = function(event){
+				if(xhr.status === 200){
+					// console.log(xhr.response);
+				} else {
+					console.log(xhr.status+" : "+xhr.statusText);
+				}
+			};
+			xhr.send(JSON.stringify(senddata));
+		},
+		showadvancedhtml:function(){
+			jQuery("#nistvoiceadvbtn").hide();
+			jQuery("#nistvoicesearchresults").html('');
+			var html=   '<div class="voice-modalback-btn"><img nist-voice="true" id="nistvoiceback" src="'+this.extensionpath+'assets/voice-back.png"></div><br />'+
+						'<div class="nist-clear"></div>'+
+						'   <div class="voice-suggesion-card">' +
+						'		<div class="voice-card-left">' +
+						'			<h4 class="voice-card-noborder">Create your own action <button nist-voice="true" id="nistvoicerecbtn" class="voice-modal-btn"><img nist-voice="true" style="vertical-align:middle" src="'+this.extensionpath+'assets/voice-record.png"> <span nist-voice="true">Rec</span></button></h4>' +
+						'       </div>'+
+						'   </div>';
+						// '<div class="name-heading"><h2 nist-voice="true">Create your own action <button nist-voice="true" id="nistvoicerecbtn" class="voice-record-img"><img nist-voice="true" style="vertical-align:middle" src="'+this.extensionpath+'assets/voice-record.png"> <span nist-voice="true">Rec</span></button></h2><br /></div>';
+			jQuery("#nistvoicesearchresults").append(html);
+			jQuery("#nistvoicerecbtn").click(function () {
+				Voicepluginsdk.gettimestamp("start");
+			});
+			jQuery("#nistvoiceback").click(function () {
+				Voicepluginsdk.backtomodal();
+			});
+			var xhr = new XMLHttpRequest();
+			xhr.open("GET", this.apihost + "/clickevents/suggested?domain="+encodeURI(window.location.host), true);
+			xhr.onload = function(event){
+				if(xhr.status === 200){
+					Voicepluginsdk.showsuggestedhtml(JSON.parse(xhr.response));
+				} else {
+					console.log(xhr.status+" : "+xhr.statusText);
+				}
+			};
+			xhr.send();
+		},
+		showsuggestedhtml:function(data){
+			if(data.length>0) {
+				this.recordedsequenceids = data;
+				var html = '   <div class="voice-suggesion-card">' +
+					'		<div class="voice-card-left">' +
+					'			<h4>Our AI detected this sequence. <br /> Do you want to name it? <br /><span style="color:#ff4800;font-weight:bold;">(Alpha version: Not reliable)</span></h4>' +
+					'			<ul id="nist-recordresultrow" class="voice-sugggesion-bullet">' +
+					'			</ul>' +
+					'			<div>' +
+					'				<input id="nistsequencelabel" type="text" name="save-recrded" class="voice-save-recrded-inpt" placeholder="Enter label" nist-voice="true">' +
+					'				<button onclick="Voicepluginsdk.submitrecordedlabel(\'recording\');" class="voice-submit-btn">Submit</button><button class="voice-cancel-btn" onclick="Voicepluginsdk.submitrecordedlabel(\'invalid\');">Invalid Sequence</button><button class="voice-cancel-btn" onclick="Voicepluginsdk.submitrecordedlabel(\'ignore\');">Ignore</button>' +
+					'			</div>' +
+					'		</div>' +
+					'	</div>';
+
+				jQuery("#nistvoicesearchresults").append(html);
+				for (var i = 0; i < data.length; i++) {
+					this.renderrecordresultrow(data[i], i);
+				}
+			}
+		},
+		backtomodal:function(){
+			jQuery("#nistvoiceadvbtn").show();
+			jQuery("#nistvoicesearchresults").html('');
 		}
 	};
 	Voicepluginsdk.init();
